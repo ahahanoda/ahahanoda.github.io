@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube 動画プレーヤー（対策版）</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 640px;
+            width: 100%;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 20px;
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            background-color: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .error-message {
+            color: #ff0000;
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>YouTube 動画取得・再生</h1>
+    
+    <div class="input-group">
+        <input type="text" id="youtubeUrl" placeholder="YouTubeの動画URLを入力">
+        <button onclick="loadVideo()">動画を表示</button>
+    </div>
+    
+    <div id="errorMessage" class="error-message">有効なYouTubeのURLを入力してください。</div>
+
+    <div id="videoWrapper" class="video-wrapper">
+        <!-- 対策:ブラウザのセキュリティブロックを外すためのリファラー制御属性を追加 -->
+       <iframe id="player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
+    </div>
+</div>
+
+<script>
+function extractVideoId(url) {
+    const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regExp);
+    return match ? match[1] : null;
+}
+
+function loadVideo() {
+    const urlInput = document.getElementById('youtubeUrl').value.trim();
+    const videoId = extractVideoId(urlInput);
+    
+    const player = document.getElementById('player');
+    const videoWrapper = document.getElementById('videoWrapper');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (videoId) {
+        errorMessage.style.display = 'none';
+        
+        // 対策:一度iframeの要素をリセットしてブラウザのキャッシュブロックを防ぐ
+        player.src = "about:blank";
+        
+        setTimeout(() => {
+            videoWrapper.style.display = 'block';
+            player.src = `https://www.youtube.com/embed/${videoId}`;
+        }, 50);
+    } else {
+        videoWrapper.style.display = 'none';
+        player.src = '';
+        errorMessage.style.display = 'block';
+    }
+}
+</script>
+
+</body>
+</html>
