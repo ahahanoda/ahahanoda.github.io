@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルタイマー</title>
+    <!-- 安定して高速に読み込める Tailwind CSS v3 のCDNに変更 -->
+    <script src="https://jsdelivr.net" defer></script>
+    <style>
+        /* デジタルフォント風の調整 */
+        .font-digital {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col justify-center items-center p-4 text-slate-800">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border border-slate-100">
+        <h1 class="text-2xl font-bold mb-6 text-slate-700 tracking-wide">📐 SIMPLE TIMER</h1>
+        
+        <!-- タイマー表示部分 -->
+        <div class="font-digital text-6xl font-bold my-8 text-blue-600 tracking-wider" id="timer-display">
+            03:00
+        </div>
+
+        <!-- 時間設定フォーム -->
+        <div class="flex justify-center gap-4 mb-8" id="input-container">
+            <div class="flex flex-col items-center">
+                <label class="text-xs text-slate-500 font-semibold mb-1">分</label>
+                <input type="number" id="input-minutes" value="3" min="0" max="99" class="w-16 p-2 text-center text-xl font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none bg-slate-50">
+            </div>
+            <div class="flex flex-col items-center">
+                <label class="text-xs text-slate-500 font-semibold mb-1">秒</label>
+                <input type="number" id="input-seconds" value="0" min="0" max="59" class="w-16 p-2 text-center text-xl font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none bg-slate-50">
+            </div>
+        </div>
+
+        <!-- コントロールボタン -->
+        <div class="flex justify-center gap-4">
+            <button id="btn-start" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md w-28 cursor-pointer">
+                スタート
+            </button>
+            <button id="btn-stop" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md w-28 hidden cursor-pointer">
+                一時停止
+            </button>
+            <button id="btn-reset" class="bg-slate-400 hover:bg-slate-500 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md w-28 cursor-pointer">
+                リセット
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let countdown;
+        let timeLeft = 180;
+        let isRunning = false;
+
+        const display = document.getElementById('timer-display');
+        const minutesInput = document.getElementById('input-minutes');
+        const secondsInput = document.getElementById('input-seconds');
+        const startBtn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        const resetBtn = document.getElementById('btn-reset');
+        const inputContainer = document.getElementById('input-container');
+
+        function updateDisplay(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function setTimeFromInput() {
+            const mins = parseInt(minutesInput.value) || 0;
+            const secs = parseInt(secondsInput.value) || 0;
+            timeLeft = (mins * 60) + secs;
+            updateDisplay(timeLeft);
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            if (timeLeft <= 0) setTimeFromInput();
+            if (timeLeft <= 0) return;
+
+            isRunning = true;
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            inputContainer.classList.add('opacity-50', 'pointer-events-none');
+
+            countdown = setInterval(() => {
+                timeLeft--;
+                updateDisplay(timeLeft);
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    playAlarm();
+                    resetTimer();
+                    alert('時間になりました！');
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(countdown);
+            isRunning = false;
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+        }
+
+        function resetTimer() {
+            clearInterval(countdown);
+            isRunning = false;
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            inputContainer.classList.remove('opacity-50', 'pointer-events-none');
+            setTimeFromInput();
+        }
+
+        function playAlarm() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                for (let i = 0; i < 3; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime + i * 0.3);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime + i * 0.3);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.3 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(audioCtx.currentTime + i * 0.3);
+                    osc.stop(audioCtx.currentTime + i * 0.3 + 0.15);
+                }
+            } catch (e) {
+                console.log("Audio Error:", e);
+            }
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        stopBtn.addEventListener('click', stopTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        minutesInput.addEventListener('change', setTimeFromInput);
+        secondsInput.addEventListener('change', setTimeFromInput);
+        
+        setTimeFromInput();
+    </script>
+</body>
+</html>
