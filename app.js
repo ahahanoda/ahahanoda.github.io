@@ -4,7 +4,7 @@ const REPO = "ahahanoda.github.io";
 const FOLDER_PATH = "gifs"; // GIFが入っているフォルダ名
 
 async function loadGifs() {
-  const gifArea = document.getElementById('gifArea'); // GIFを表示するHTMLのID
+  const gifArea = document.getElementById('gif-list'); // HTMLのid="gif-list"に合わせる
   gifArea.innerHTML = ""; // 一旦クリア
 
   try {
