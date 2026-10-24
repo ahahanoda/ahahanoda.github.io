@@ -1,5 +1,5 @@
 (function() {
-    // 🛠️ あなたのGitHub情報に固定します
+    // 🛠️ あなたのGitHub情報
     var USERNAME = "ahahanoda"; 
     var REPO = "ahahanoda.github.io";
     var FOLDER_PATH = "gifs"; 
@@ -33,6 +33,7 @@
                 if (!token) { alert("トークンを入力してください"); return; }
                 if (!fileInput.files || fileInput.files.length === 0) { alert("ファイルを選択してください"); return; }
 
+                // 【修正箇所】配列の0番目を明示的に取得するように修正
                 var file = fileInput.files[0];
                 var fileName = file.name;
                 statusDiv.innerText = "アップロード中...";
@@ -57,12 +58,18 @@
                                 // ② GIFの保存に成功したら、続けて自動で list.txt を更新する
                                 autoUpdateListText(token, fileName, statusDiv);
                             } else {
-                                statusDiv.innerText = "失敗: " + xhr1.status;
+                                statusDiv.innerText = "失敗: " + xhr1.status + " (トークンや権限を確認してください)";
                             }
                         }
                     };
                     xhr1.send(JSON.stringify({ message: 'Upload GIF via GifTube', content: base64Data }));
                 };
+                
+                // エラーハンドリングを追加
+                reader.onerror = function() {
+                    statusDiv.innerText = "ファイルの読み込みに失敗しました。";
+                };
+                
                 reader.readAsArrayBuffer(file);
             };
         }
