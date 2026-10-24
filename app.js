@@ -1,7 +1,7 @@
-// ====== 【ここをあなたのGitHub情報に書き換えてください】 ======
-const OWNER = 'あなたのユーザー名'; // 例: 'taro-github'
-const REPO = 'リポジトリ名';       // 例: 'giftube'
-const PATH = 'gifs';             // 保存先フォルダ名（そのままでOK）
+// ====== 【ahahanodaさんのリポジトリ情報に設定済み】 ======
+const OWNER = 'ahahanoda'; 
+const REPO = 'ahahanoda.github.io'; 
+const PATH = 'gifs';             
 // ==========================================================
 
 // ページが読み込まれたら自動でGIF一覧を表示
@@ -30,7 +30,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     uploadBtn.disabled = true;
     uploadBtn.innerText = 'アップロード中...';
 
-    const file = fileInput.files[0]; // 1つ目のファイルを取得
+    const file = fileInput.files[0]; // 【修正】配列の最初のファイルオブジェクトを正しく取得
     const fileName = `${Date.now()}_${file.name}`;
     
     // ファイルをBase64に変換する処理
@@ -40,8 +40,12 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
         try {
             console.log("ファイルの読み込み（Base64変換）が完了しました。APIを叩きます。");
             
-            // 【修正ポイント】Base64データから純粋なバイナリデータ本体（1番目の要素）を確実に抽出
-            const content = reader.result.split(',')[1]; 
+            // 【重要・大修正】Base64データから純粋なバイナリデータ本体（1番目の要素 [1]）を確実に抽出
+            const base64Data = reader.result.split(',');
+            if (base64Data.length < 2) {
+                throw new Error("ファイルのデータ変換に失敗しました。");
+            }
+            const content = base64Data[1]; 
 
             const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
             
@@ -63,13 +67,11 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
                 loadGifs();          // 一覧を再読み込み
             } else {
                 const errorData = await response.json();
-                // どこが間違っているか分かりやすいようにエラーメッセージを詳しく表示
-                alert(`GitHub APIエラー: ${errorData.message}\n\n【確認してください】\n1. ユーザー名(${OWNER})やリポジトリ名(${REPO})は合っていますか？\n2. トークンに「repo」権限はありますか？\n3. リポジトリは存在しますか？`);
+                alert(`GitHub APIエラー: ${errorData.message}\n\n【確認項目】\nトークンのスコープ（権限）で「repo」にチェックが入っているか再確認してください。`);
                 console.error(errorData);
             }
         } catch (error) {
-            // エラーの内容を具体的にポップアップに出すように変更
-            alert('通信中にエラーが発生しました。\n詳細: ' + error.message);
+            alert('エラーが発生しました。\n詳細: ' + error.message);
             console.error(error);
         } finally {
             // ボタンを元に戻す
