@@ -1,6 +1,6 @@
 // ====== 【ここをあなたのGitHub情報に書き換えてください】 ======
-const OWNER = 'ahahanoda'; // 例: 'taro-github'
-const REPO = 'ahahanoda.github.io';       // 例: 'giftube'
+const OWNER = 'あなたのユーザー名'; // 例: 'taro-github'
+const REPO = 'リポジトリ名';       // 例: 'giftube'
 const PATH = 'gifs';             // 保存先フォルダ名（そのままでOK）
 // ==========================================================
 
@@ -40,7 +40,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
         try {
             console.log("ファイルの読み込み（Base64変換）が完了しました。APIを叩きます。");
             
-            // Base64データから純粋なバイナリデータ部分のみを抽出
+            // 【修正ポイント】Base64データから純粋なバイナリデータ本体（1番目の要素）を確実に抽出
             const content = reader.result.split(',')[1]; 
 
             const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
@@ -63,11 +63,13 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
                 loadGifs();          // 一覧を再読み込み
             } else {
                 const errorData = await response.json();
-                alert(`GitHub APIエラー: ${errorData.message}\nリポジトリ名やユーザー名、トークンの権限が正しいか確認してください。`);
+                // どこが間違っているか分かりやすいようにエラーメッセージを詳しく表示
+                alert(`GitHub APIエラー: ${errorData.message}\n\n【確認してください】\n1. ユーザー名(${OWNER})やリポジトリ名(${REPO})は合っていますか？\n2. トークンに「repo」権限はありますか？\n3. リポジトリは存在しますか？`);
                 console.error(errorData);
             }
         } catch (error) {
-            alert('通信中にエラーが発生しました。');
+            // エラーの内容を具体的にポップアップに出すように変更
+            alert('通信中にエラーが発生しました。\n詳細: ' + error.message);
             console.error(error);
         } finally {
             // ボタンを元に戻す
@@ -95,7 +97,7 @@ async function loadGifs() {
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            listArea.innerHTML = '<p style="color: gray;">GIFがまだありません。リポジトリに gifs フォルダを手動で作るか、最初の1枚をアップロードするとここに表示されます。</p>';
+            listArea.innerHTML = '<p style="color: gray;">GIFがまだありません。最初の1枚をアップロードするとここに表示されます。</p>';
             return;
         }
 
