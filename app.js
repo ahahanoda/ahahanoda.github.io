@@ -27,7 +27,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     uploadBtn.disabled = true;
     uploadBtn.innerText = 'アップロード中...';
 
-    // 【ここが最大の修正点】選択された1つ目のファイルを正しく取得
+    // 【修正完了】選択された1つ目のファイルオブジェクトを正しく取得
     const file = fileInput.files[0]; 
     const fileName = `${Date.now()}_${file.name}`;
     
@@ -36,7 +36,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     
     reader.onload = async () => {
         try {
-            // Base64データから不要なヘッダー（data:image/gif;base64,）を削り、純粋なデータ本体を取り出す
+            // Base64データから純粋なデータ本体（カンマの後の部分）を取り出す
             const content = reader.result.split(',')[1]; 
 
             // GitHub APIのURL
