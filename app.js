@@ -9,7 +9,7 @@ async function loadGifs() {
 
   try {
     // GitHubのContents APIを叩いて、フォルダ内のファイル一覧を取得する（トークンなしの公開APIでOK）
-    const response = await fetch(`https://api.github.com${USERNAME}/${REPO}/contents/${FOLDER_PATH}`);
+    const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER_PATH}`);
     const files = await response.json();
 
     // フォルダ内のファイルを1つずつ処理
