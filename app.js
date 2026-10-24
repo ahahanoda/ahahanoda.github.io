@@ -1,8 +1,8 @@
-// ====== 【設定：変更なし】 ======
+// ====== 【設定】 ======
 const OWNER = 'ahahanoda'; 
 const REPO = 'ahahanoda.github.io'; 
 const PATH = 'gifs';             
-// ==========================================
+// ====================
 
 // ページが読み込まれたら自動でGIF一覧を表示
 window.addEventListener('DOMContentLoaded', () => {
@@ -15,34 +15,32 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     const fileInput = document.getElementById('gif-file');
     const uploadBtn = document.getElementById('upload-btn');
     
-    // 1. 入力チェック
-    if (!fileInput.files || fileInput.files.length === 0) {
+    // 【修正：イベントからファイルを安全に引き出す方法に変更】
+    const selectedFiles = fileInput.files;
+    if (!selectedFiles || selectedFiles.length === 0) {
         return alert('ファイルを選択してください。');
     }
     if (!token) {
         return alert('GitHubアクセストークンを入力してください。');
     }
 
-    // ボタンを「アップロード中...」にする
     uploadBtn.disabled = true;
     uploadBtn.innerText = 'アップロード中...';
 
-    // 【修正完了】選択された1つ目のファイルオブジェクトを正しく取得
-    const file = fileInput.files[0]; 
-    const fileName = `${Date.now()}_${file.name}`;
+    // 1番目のファイルを確実に特定する安全な書き方
+    const targetFile = selectedFiles.item(0); 
+    const fileName = `${Date.now()}_${targetFile.name}`;
     
-    // 2. ファイルを読み込んでBase64に変換
     const reader = new FileReader();
     
     reader.onload = async () => {
         try {
-            // Base64データから純粋なデータ本体（カンマの後の部分）を取り出す
-            const content = reader.result.split(',')[1]; 
+            // カンマで分割してデータ本体を取り出す
+            const contentArray = reader.result.split(',');
+            const content = contentArray[1]; 
 
-            // GitHub APIのURL
             const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
             
-            // 3. GitHubに送信
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
@@ -57,32 +55,31 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 
             if (response.ok) {
                 alert('アップロードが正常に完了しました！');
-                fileInput.value = ''; // 選択をクリア
-                loadGifs();          // 一覧を更新
+                fileInput.value = ''; 
+                loadGifs();          
             } else {
                 const errorData = await response.json();
-                alert(`GitHub APIエラー: ${errorData.message}\n\n※トークンを作成する時に「repo」にチェックが入っているか確認してください。`);
+                alert(`GitHub APIエラー: ${errorData.message}\n\n※トークン作成時に「repo」の権限を入れたか確認してください。`);
                 console.error(errorData);
             }
         } catch (error) {
             alert('送信中にエラーが発生しました。\n詳細: ' + error.message);
             console.error(error);
         } finally {
-            // ボタンを元に戻す
             uploadBtn.disabled = false;
             uploadBtn.innerText = 'アップロード';
         }
     };
 
     reader.onerror = (err) => {
-        alert('ファイルの読み込みに失敗しました。');
+        alert('ファイルの読み込み（FileReader）に失敗しました。');
         console.error(err);
         uploadBtn.disabled = false;
         uploadBtn.innerText = 'アップロード';
     };
 
-    // 変換を実行
-    reader.readAsDataURL(file);
+    // 読み込み開始
+    reader.readAsDataURL(targetFile);
 });
 
 // 一覧表示処理
