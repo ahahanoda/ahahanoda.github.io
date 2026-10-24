@@ -40,7 +40,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
             const content = rawResult.substring(commaIndex + 1);
 
             // GitHub APIのURL
-            const url = `https://api.github.com${OWNER}/${REPO}/contents/${PATH}/${fileName}`;
+            const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}/${fileName}`;
             
             // GitHubへ送信
             const response = await fetch(url, {
