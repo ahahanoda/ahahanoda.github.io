@@ -1,6 +1,6 @@
 // ====== 【ここをあなたのGitHub情報に書き換えてください】 ======
 const OWNER = 'ahahanoda'; // 例: 'taro-github'
-const REPO = 'リポジトリ名';       // 例: 'giftube'
+const REPO = 'ahahanoda.github.io';       // 例: 'giftube'
 const PATH = 'gifs';             // 保存先フォルダ名（そのままでOK）
 // ==========================================================
 
