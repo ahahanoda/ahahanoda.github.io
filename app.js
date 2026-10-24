@@ -1,31 +1,50 @@
-const OWNER = 'ahahanoda';
-const REPO = 'ahahanoda.github.io';
-const PATH = 'gifs'; // GIFを保存するフォルダ
+// ====== 【ここをあなたのGitHub情報に書き換えてください】 ======
+const OWNER = 'ahahanoda'; // 例: 'taro-github'
+const REPO = 'リポジトリ名';       // 例: 'giftube'
+const PATH = 'gifs';             // 保存先フォルダ名（そのままでOK）
+// ==========================================================
+
+// ページが読み込まれたら自動でGIF一覧を表示
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("JavaScriptが正常に読み込まれました");
+    loadGifs();
+});
 
 // アップロード処理
-// アップロード処理（状況が分かる進化版）
 document.getElementById('upload-btn').addEventListener('click', async () => {
-    const token = document.getElementById('token').value;
+    console.log("アップロードボタンがクリックされました");
+    
+    const token = document.getElementById('token').value.trim();
     const fileInput = document.getElementById('gif-file');
     const uploadBtn = document.getElementById('upload-btn');
     
-    if (!fileInput.files.length) return alert('ファイルを選択してください');
-    if (!token) return alert('GitHubアクセストークンを入力してください');
+    // 入力チェック
+    if (!fileInput.files || fileInput.files.length === 0) {
+        return alert('ファイルを選択してください。');
+    }
+    if (!token) {
+        return alert('GitHubアクセストークンを入力してください。');
+    }
 
-    // ボタンを無効化して進行中であることを分かりやすくする
+    // ボタンを一時的に無効化
     uploadBtn.disabled = true;
     uploadBtn.innerText = 'アップロード中...';
 
-    const file = fileInput.files[0]; // [0] が抜けていた場合はここで修正
+    const file = fileInput.files[0]; // 1つ目のファイルを取得
     const fileName = `${Date.now()}_${file.name}`;
     
+    // ファイルをBase64に変換する処理
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    
     reader.onload = async () => {
         try {
-            const content = reader.result.split(',')[1]; // Base64のデータ本体を確実に取得
+            console.log("ファイルの読み込み（Base64変換）が完了しました。APIを叩きます。");
+            
+            // Base64データから純粋なバイナリデータ部分のみを抽出
+            const content = reader.result.split(',')[1]; 
 
             const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
+            
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
@@ -39,16 +58,16 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
             });
 
             if (response.ok) {
-                alert('アップロード完了！');
-                fileInput.value = '';
-                loadGifs();
+                alert('アップロードが正常に完了しました！');
+                fileInput.value = ''; // 選択ファイルをクリア
+                loadGifs();          // 一覧を再読み込み
             } else {
                 const errorData = await response.json();
-                alert(`GitHub APIエラー: ${errorData.message}`);
+                alert(`GitHub APIエラー: ${errorData.message}\nリポジトリ名やユーザー名、トークンの権限が正しいか確認してください。`);
                 console.error(errorData);
             }
         } catch (error) {
-            alert('通信エラーが発生しました。コンソールを確認してください。');
+            alert('通信中にエラーが発生しました。');
             console.error(error);
         } finally {
             // ボタンを元に戻す
@@ -56,24 +75,50 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
             uploadBtn.innerText = 'アップロード';
         }
     };
+
+    reader.onerror = (err) => {
+        alert('ファイルの読み込みに失敗しました。');
+        console.error(err);
+        uploadBtn.disabled = false;
+        uploadBtn.innerText = 'アップロード';
+    };
+
+    // 変換を実行
+    reader.readAsDataURL(file);
 });
 
 // 一覧表示処理
-async () => {
+async function loadGifs() {
     const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}`;
-    const response = await fetch(url);
-    if (!response.ok) return;
-
-    const files = await response.json();
     const listArea = document.getElementById('gif-list');
-    listArea.innerHTML = '';
-
-    files.forEach(file => {
-        if (file.name.endsWith('.gif')) {
-            const img = document.createElement('img');
-            img.src = file.download_url; // GitHub上の生の画像URL
-            img.className = 'gif-item';
-            listArea.appendChild(img);
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            listArea.innerHTML = '<p style="color: gray;">GIFがまだありません。リポジトリに gifs フォルダを手動で作るか、最初の1枚をアップロードするとここに表示されます。</p>';
+            return;
         }
-    });
+
+        const files = await response.json();
+        listArea.innerHTML = ''; // 一度クリア
+
+        let hasGif = false;
+        files.forEach(file => {
+            if (file.name.toLowerCase().endsWith('.gif')) {
+                hasGif = true;
+                const img = document.createElement('img');
+                img.src = file.download_url; // GitHub上の生の画像URL
+                img.style.maxWidth = '200px'; 
+                img.style.margin = '10px';
+                img.style.border = '1px solid #ccc';
+                listArea.appendChild(img);
+            }
+        });
+
+        if (!hasGif) {
+            listArea.innerHTML = '<p style="color: gray;">フォルダはありますが、GIFファイルが見つかりません。</p>';
+        }
+    } catch (error) {
+        console.error('一覧の取得に失敗しました:', error);
+    }
 }
