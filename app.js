@@ -3,39 +3,57 @@ const REPO = 'ahahanoda.github.io';
 const PATH = 'gifs'; // GIFを保存するフォルダ
 
 // アップロード処理
+// アップロード処理（状況が分かる進化版）
 document.getElementById('upload-btn').addEventListener('click', async () => {
     const token = document.getElementById('token').value;
     const fileInput = document.getElementById('gif-file');
-    if (!fileInput.files.length || !token) return alert('ファイルとトークンを入力してください');
+    const uploadBtn = document.getElementById('upload-btn');
+    
+    if (!fileInput.files.length) return alert('ファイルを選択してください');
+    if (!token) return alert('GitHubアクセストークンを入力してください');
 
-    const file = fileInput.files[0];
+    // ボタンを無効化して進行中であることを分かりやすくする
+    uploadBtn.disabled = true;
+    uploadBtn.innerText = 'アップロード中...';
+
+    const file = fileInput.files[0]; // [0] が抜けていた場合はここで修正
     const fileName = `${Date.now()}_${file.name}`;
     
-    // ファイルをBase64に変換
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
-        const content = reader.result.split(',')[1]; // Base64のデータ部分のみ
+        try {
+            const content = reader.result.split(',')[1]; // Base64のデータ本体を確実に取得
 
-        // GitHub APIへPUTリクエスト
-        const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: `Upload ${fileName}`,
-                content: content
-            })
-        });
+            const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Upload ${fileName}`,
+                    content: content
+                })
+            });
 
-        if (response.ok) {
-            alert('アップロード完了！ページをリロードしてください。');
-            loadGifs();
-        } else {
-            alert('アップロードに失敗しました。');
+            if (response.ok) {
+                alert('アップロード完了！');
+                fileInput.value = '';
+                loadGifs();
+            } else {
+                const errorData = await response.json();
+                alert(`GitHub APIエラー: ${errorData.message}`);
+                console.error(errorData);
+            }
+        } catch (error) {
+            alert('通信エラーが発生しました。コンソールを確認してください。');
+            console.error(error);
+        } finally {
+            // ボタンを元に戻す
+            uploadBtn.disabled = false;
+            uploadBtn.innerText = 'アップロード';
         }
     };
 });
