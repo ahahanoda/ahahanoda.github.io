@@ -2,24 +2,27 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GifTube</title>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>🎬 GifTube</h1>
     
-    <!-- トークン入力（自分用・隠蔽用） -->
-    <div id="auth">
-        <input type="password" id="token" placeholder="GitHub Access Token">
+    <!-- トークン入力 -->
+    <div style="margin-bottom: 15px;">
+        <input type="password" id="token" placeholder="GitHub Access Token" style="width: 300px;">
     </div>
 
     <!-- アップロードエリア -->
-    <div id="upload-form">
+    <div style="margin-bottom: 20px;">
         <input type="file" id="gif-file" accept=".gif">
         <button id="upload-btn">アップロード</button>
     </div>
 
+    <hr>
+
     <!-- 一覧表示エリア -->
+    <h2>投稿されたGIF一覧</h2>
     <div id="gif-list"></div>
 
     <script src="app.js"></script>
