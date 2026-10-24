@@ -1,5 +1,5 @@
-const OWNER = 'あなたのユーザー名';
-const REPO = 'リポジトリ名';
+const OWNER = 'ahahanoda';
+const REPO = 'ahahanoda.github.io';
 const PATH = 'gifs'; // GIFを保存するフォルダ
 
 // アップロード処理
