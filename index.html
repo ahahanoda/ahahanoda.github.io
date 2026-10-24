@@ -1,30 +1,43 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>GifTube</title>
+    <style>
+        body { font-size: 14px; font-family: sans-serif; margin: 8px; background-color: #ffffff; color: #000000; }
+        h1 { font-size: 18px; margin: 5px 0; }
+        h2 { font-size: 15px; margin: 10px 0; }
+        input, button { font-size: 12px; }
+        #gif-list img { max-width: 100%; height: auto; display: block; margin: 10px auto; border: 1px solid #ccc; }
+        .gif-container { text-align: center; margin-bottom: 15px; }
+        .gif-title { font-size: 11px; color: #555555; }
+        .error { color: red; font-size: 12px; text-align: center; }
+    </style>
 </head>
 <body>
     <h1>🎬 GifTube</h1>
     
-    <!-- トークン入力 -->
+    <!-- トークン入力 (GUI維持・DSiではモック化) -->
     <div style="margin-bottom: 15px;">
-        <input type="password" id="token" placeholder="GitHub Access Token" style="width: 300px;">
+        <input type="password" id="token" placeholder="GitHub Access Token" style="width: 90%;" disabled value="xxxxxxxxxxxxxxxx">
     </div>
 
-    <!-- アップロードエリア -->
+    <!-- アップロードエリア (GUI維持・DSiでは非活性) -->
     <div style="margin-bottom: 20px;">
-        <input type="file" id="gif-file" accept=".gif">
-        <button id="upload-btn">アップロード</button>
+        <input type="file" id="gif-file" accept=".gif" disabled><br>
+        <button id="upload-btn" disabled style="margin-top: 5px;">アップロード</button>
     </div>
 
     <hr>
 
     <!-- 一覧表示エリア -->
     <h2>投稿されたGIF一覧</h2>
-    <div id="gif-list"></div>
+    <div id="gif-list">
+        <p style="text-align:center; color:#666;">読み込み中...</p>
+    </div>
 
-    <script src="app.js"></script>
+    <script type="text/javascript" src="app.js"></script>
 </body>
 </html>
