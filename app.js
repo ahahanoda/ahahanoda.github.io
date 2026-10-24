@@ -15,9 +15,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     const fileInput = document.getElementById('gif-file');
     const uploadBtn = document.getElementById('upload-btn');
     
-    // 【修正：イベントからファイルを安全に引き出す方法に変更】
-    const selectedFiles = fileInput.files;
-    if (!selectedFiles || selectedFiles.length === 0) {
+    if (!fileInput.files || fileInput.files.length === 0) {
         return alert('ファイルを選択してください。');
     }
     if (!token) {
@@ -27,20 +25,24 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     uploadBtn.disabled = true;
     uploadBtn.innerText = 'アップロード中...';
 
-    // 1番目のファイルを確実に特定する安全な書き方
-    const targetFile = selectedFiles.item(0); 
-    const fileName = `${Date.now()}_${targetFile.name}`;
+    // 選択されたファイルを取得
+    const file = fileInput.files[0]; 
+    const fileName = `${Date.now()}_${file.name}`;
     
+    // ファイルを読み込む
     const reader = new FileReader();
     
     reader.onload = async () => {
         try {
-            // カンマで分割してデータ本体を取り出す
-            const contentArray = reader.result.split(',');
-            const content = contentArray[1]; 
+            // AIの誤変換を防ぐため、一番確実な方法でBase64の純粋なデータ部分を抽出します
+            const rawResult = reader.result;
+            const commaIndex = rawResult.indexOf(',');
+            const content = rawResult.substring(commaIndex + 1);
 
+            // GitHub APIのURL
             const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}/${fileName}`;
             
+            // GitHubへ送信
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
@@ -72,14 +74,14 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     };
 
     reader.onerror = (err) => {
-        alert('ファイルの読み込み（FileReader）に失敗しました。');
+        alert('ファイルの読み込みに失敗しました。');
         console.error(err);
         uploadBtn.disabled = false;
         uploadBtn.innerText = 'アップロード';
     };
 
-    // 読み込み開始
-    reader.readAsDataURL(targetFile);
+    // 読み込みを開始
+    reader.readAsDataURL(file);
 });
 
 // 一覧表示処理
