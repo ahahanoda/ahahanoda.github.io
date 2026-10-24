@@ -3,13 +3,16 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
+    <!-- DSiの画面幅（横256px）に極力フィットさせるための設定 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>GifTube</title>
     <style>
+        /* DSiとスマホ両方でデザインが崩れないようにするための最低限のCSS */
         body { font-size: 14px; font-family: sans-serif; margin: 8px; background-color: #ffffff; color: #000000; }
         h1 { font-size: 18px; margin: 5px 0; }
         h2 { font-size: 15px; margin: 10px 0; }
         input, button { font-size: 12px; }
+        /* 画像がDSiの画面を突き抜けないように自動調整 */
         #gif-list img { max-width: 100%; height: auto; display: block; margin: 10px auto; border: 1px solid #ccc; }
         .gif-container { text-align: center; margin-bottom: 15px; }
         .gif-title { font-size: 11px; color: #555555; }
@@ -19,15 +22,15 @@
 <body>
     <h1>🎬 GifTube</h1>
     
-    <!-- トークン入力 (GUI維持・DSiではモック化) -->
+    <!-- トークン入力 (最初はグレーアウトせず通常表示) -->
     <div style="margin-bottom: 15px;">
-        <input type="password" id="token" placeholder="GitHub Access Token" style="width: 90%;" disabled value="xxxxxxxxxxxxxxxx">
+        <input type="password" id="token" placeholder="GitHub Access Token" style="width: 300px;">
     </div>
 
-    <!-- アップロードエリア (GUI維持・DSiでは非活性) -->
+    <!-- アップロードエリア (最初は通常表示) -->
     <div style="margin-bottom: 20px;">
-        <input type="file" id="gif-file" accept=".gif" disabled><br>
-        <button id="upload-btn" disabled style="margin-top: 5px;">アップロード</button>
+        <input type="file" id="gif-file" accept=".gif">
+        <button id="upload-btn">アップロード</button>
     </div>
 
     <hr>
@@ -38,6 +41,7 @@
         <p style="text-align:center; color:#666;">読み込み中...</p>
     </div>
 
+    <!-- 互換性のため、必ずbodyの最下部で読み込み -->
     <script type="text/javascript" src="app.js"></script>
 </body>
 </html>
