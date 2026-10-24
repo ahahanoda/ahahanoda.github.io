@@ -1,36 +1,73 @@
-// あなたのGitHub情報に書き換えてください
-const USERNAME = "ahahanoda"; 
-const REPO = "ahahanoda.github.io";
-const FOLDER_PATH = "gifs"; // GIFが入っているフォルダ名
+// DSiブラウザ（Opera）互換の最低限の記述（ES3形式）
 
-async function loadGifs() {
-  const gifArea = document.getElementById('gif-list'); // HTMLのid="gif-list"に合わせる
-  gifArea.innerHTML = ""; // 一旦クリア
+(function() {
+    // あなたのGitHub情報（パスの組み立て用）
+    var USERNAME = "ahahanoda"; 
+    var REPO = "ahahanoda.github.io";
+    var FOLDER_PATH = "gifs"; 
 
-  try {
-    // GitHubのContents APIを叩いて、フォルダ内のファイル一覧を取得する（トークンなしの公開APIでOK）
-    const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER_PATH}`);
-    const files = await response.json();
+    // 投稿フォームの送信動作を安全に無効化
+    var form = document.getElementById('uploadForm');
+    if (form) {
+        form.onsubmit = function() { return false; };
+    }
 
-    // フォルダ内のファイルを1つずつ処理
-    files.forEach(file => {
-      // 拡張子が .gif のファイルだけを対象にする
-      if (file.name.endsWith('.gif')) {
-        const img = document.createElement('img');
+    function loadGifs() {
+        var gifArea = document.getElementById('gif-list'); 
+        if (!gifArea) return;
         
-        // 重要: github.io の生の画像URL（または file.download_url）を指定する
-        img.src = `https://${USERNAME}.github.io/${FOLDER_PATH}/${file.name}`;
-        
-        img.style.width = '200px'; // 見やすさの調整
-        img.style.margin = '10px';
-        
-        gifArea.appendChild(img);
-      }
-    });
-  } catch (error) {
-    console.error("GIFの読み込みに失敗しました:", error);
-  }
-}
+        gifArea.innerHTML = ""; // クリア
 
-// ページを開いた時と、投稿が成功した後にこの関数を呼ぶ
-window.onload = loadGifs;
+        // 【手動設定エリア】
+        // DSiブラウザはGitHub APIのセキュリティ制限（TLS等）で通信が遮断されるため、
+        // 閲覧を確実に機能させるために、gifsフォルダ内にあるファイル名をここに直接記述します。
+        // （新しいGIFをフォルダに入れたら、ここにファイル名を追加してください）
+        var files = [
+            "sample1.gif",
+            "sample2.gif",
+            "animation.gif"
+        ];
+
+        // DSiでは forEach や アロー関数は動かないため、通常の for ループを使用
+        for (var i = 0; i < files.length; i++) {
+            var fileName = files[i];
+
+            // 拡張子が .gif のものだけを処理（念のためのセーフティ）
+            // DSiでは endsWith() が使えないため、indexOf や slice を使用
+            if (fileName.indexOf('.gif') !== -1) {
+                
+                // 画像を包むコンテナを作成
+                var container = document.createElement('div');
+                container.className = 'gif-item';
+
+                var img = document.createElement('img');
+                
+                // 互換性のある文字列結合（テンプレートリテラル ${} の禁止）
+                img.src = 'https://' + USERNAME + '.github.io/' + FOLDER_PATH + '/' + fileName;
+                img.style.width = '200px'; 
+                img.style.margin = '10px';
+                
+                // タイトル表示用（ファイル名から拡張子を除いたものを簡易表示）
+                var titleDiv = document.createElement('div');
+                titleDiv.className = 'gif-title';
+                var cleanTitle = fileName.replace('.gif', '');
+                titleDiv.appendChild(document.createTextNode(cleanTitle));
+
+                // 組み立てて画面に追加
+                container.appendChild(img);
+                container.appendChild(titleDiv);
+                gifArea.appendChild(container);
+            }
+        }
+    }
+
+    // ページ読み込み完了時に実行（window.onloadを安全にバインド）
+    if (window.addEventListener) {
+        window.addEventListener('load', loadGifs, false);
+    } else if (window.attachEvent) {
+        window.attachEvent('onload', loadGifs); // さらに古いブラウザ用
+    } else {
+        window.onload = loadGifs;
+    }
+
+})();
