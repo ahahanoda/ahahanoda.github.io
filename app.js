@@ -19,7 +19,7 @@ async function loadGifs() {
         const img = document.createElement('img');
         
         // 重要: github.io の生の画像URL（または file.download_url）を指定する
-        img.src = `https://${USERNAME}.github.io/${REPO}/${FOLDER_PATH}/${file.name}`;
+        img.src = `https://${USERNAME}.github.io/${FOLDER_PATH}/${file.name}`;
         
         img.style.width = '200px'; // 見やすさの調整
         img.style.margin = '10px';
