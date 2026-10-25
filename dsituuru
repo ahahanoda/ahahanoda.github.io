@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <!-- DSiの画面幅（256px）に最適化 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>DSi ツール</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; font-size: 14px; margin: 0; padding: 0; }
+        body { width: 240px; margin: 0 auto; background: #f0f0f0; color: #333; padding-bottom: 20px; }
+        
+        /* タブメニュー */
+        .tabs { display: table; width: 100%; margin-top: 5px; border-collapse: collapse; }
+        .tab { display: table-cell; text-align: center; background: #ccc; padding: 6px 0; border: 1px solid #999; cursor: pointer; font-weight: bold; }
+        .tab.active { background: #fff; border-bottom: 1px solid #fff; }
+        
+        /* コンテンツエリア */
+        .content { display: none; background: #fff; padding: 8px; border: 1px solid #999; border-top: none; min-height: 150px; }
+        .content.active { display: block; }
+        
+        /* 電卓スタイル */
+        .calc-disp { width: 100%; height: 28px; text-align: right; margin-bottom: 6px; padding: 4px; font-size: 16px; border: 1px solid #999; background: #eef; }
+        .calc-grid { width: 100%; }
+        .calc-btn { width: 23%; height: 32px; margin: 1%; font-weight: bold; background: #eee; border: 1px solid #999; }
+        .calc-btn:active { background: #ddd; }
+        
+        /* メモスタイル */
+        .memo-area { width: 100%; height: 120px; padding: 4px; border: 1px solid #999; resize: none; }
+        
+        /* ToDoスタイル */
+        .todo-input-wrap { display: table; width: 100%; margin-bottom: 6px; }
+        .todo-txt { display: table-cell; width: 75%; height: 26px; border: 1px solid #999; padding: 2px; }
+        .todo-add { display: table-cell; width: 25%; height: 26px; background: #ddd; border: 1px solid #999; font-weight: bold; }
+        .todo-list { list-style: none; }
+        .todo-item { padding: 4px 0; border-bottom: 1px solid #eee; position: relative; font-size: 13px; }
+        .todo-del { float: right; background: #ffcccc; border: 1px solid #cc9999; padding: 1px 4px; font-size: 11px; margin-top: -2px; }
+    </style>
+</head>
+<body>
+
+    <!-- タブ切り替え -->
+    <div class="tabs">
+        <div class="tab active" id="t-calc" onclick="switchTab('calc')">電卓</div>
+        <div class="tab" id="t-memo" onclick="switchTab('memo')">メモ</div>
+        <div class="tab" id="t-todo" onclick="switchTab('todo')">ToDo</div>
+    </div>
+
+    <!-- 電卓画面 -->
+    <div class="content active" id="c-calc">
+        <input type="text" id="disp" class="calc-disp" readonly value="0">
+        <div class="calc-grid">
+            <button class="calc-btn" onclick="cClear()">C</button>
+            <button class="calc-btn" onclick="cInput('/')">/</button>
+            <button class="calc-btn" onclick="cInput('*')">*</button>
+            <button class="calc-btn" onclick="cInput('-')">-</button><br>
+            <button class="calc-btn" onclick="cInput('7')">7</button>
+            <button class="calc-btn" onclick="cInput('8')">8</button>
+            <button class="calc-btn" onclick="cInput('9')">9</button>
+            <button class="calc-btn" onclick="cInput('+')">+</button><br>
+            <button class="calc-btn" onclick="cInput('4')">4</button>
+            <button class="calc-btn" onclick="cInput('5')">5</button>
+            <button class="calc-btn" onclick="cInput('6')">6</button>
+            <button class="calc-btn" onclick="cCalc()">=</button><br>
+            <button class="calc-btn" onclick="cInput('1')">1</button>
+            <button class="calc-btn" onclick="cInput('2')">2</button>
+            <button class="calc-btn" onclick="cInput('3')">3</button>
+            <button class="calc-btn" onclick="cInput('0')">0</button>
+        </div>
+    </div>
+
+    <!-- メモ画面 -->
+    <div class="content" id="c-memo">
+        <textarea class="memo-area" placeholder="ここにメモを書けます（※閉じると消えます）"></textarea>
+    </div>
+
+    <!-- ToDo画面 -->
+    <div class="content" id="c-todo">
+        <div class="todo-input-wrap">
+            <input type="text" id="todo-input" class="todo-txt" placeholder="タスクを入力">
+            <button class="todo-add" onclick="addTodo()">追加</button>
+        </div>
+        <ul id="todo-list" class="todo-list"></ul>
+    </div>
+
+    <script>
+        // タブ切り替え処理
+        function switchTab(type) {
+            var tabs = ['calc', 'memo', 'todo'];
+            for(var i=0; i<tabs.length; i++) {
+                document.getElementById('t-' + tabs[i]).className = 'tab';
+                document.getElementById('c-' + tabs[i]).className = 'content';
+            }
+            document.getElementById('t-' + type).className = 'tab active';
+            document.getElementById('c-' + type).className = 'content active';
+        }
+
+        // 電卓ロジック (古いJS用に安全な実装)
+        var disp = document.getElementById('disp');
+        var isNewInput = true;
+
+        function cInput(val) {
+            if (isNewInput && !isNaN(val)) {
+                disp.value = val;
+                isNewInput = false;
+            } else {
+                if(disp.value == '0' && !isNaN(val)) {
+                    disp.value = val;
+                } else {
+                    disp.value += val;
+                }
+                isNewInput = false;
+            }
+        }
+        function cClear() {
+            disp.value = '0';
+            isNewInput = true;
+        }
+        function cCalc() {
+            try {
+                // DSiブラウザ対応の簡易安全評価
+                var result = Function('return ' + disp.value)();
+                disp.value = result;
+            } catch(e) {
+                disp.value = 'Error';
+            }
+            isNewInput = true;
+        }
+
+        // ToDoロジック
+        function addTodo() {
+            var input = document.getElementById('todo-input');
+            if(input.value.trim() === '') return;
+            
+            var li = document.createElement('li');
+            li.className = 'todo-item';
+            
+            // テキスト部分
+            var txt = document.createTextNode(input.value);
+            li.appendChild(txt);
+            
+            // 削除ボタン
+            var delBtn = document.createElement('button');
+            delBtn.className = 'todo-del';
+            delBtn.innerHTML = '消す';
+            delBtn.onclick = function() {
+                this.parentNode.parentNode.removeChild(this.parentNode);
+            };
+            li.appendChild(delBtn);
+            
+            document.getElementById('todo-list').appendChild(li);
+            input.value = '';
+        }
+    </script>
+</body>
+</html>
