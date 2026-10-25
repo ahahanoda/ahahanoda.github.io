@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Windows DSi Edition</title>
+<style>
+  /* 全体のリセット */
+  * {
+    box-sizing: border-box;
+    font-family: "MS Gothic", "monospace", sans-serif;
+    font-size: 11px;
+    margin: 0;
+    padding: 0;
+  }
+  body, html {
+    width: 100%;
+    height: 100%;
+    background-color: #008080;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* デスクトップアイコン */
+  .icon-list {
+    padding: 8px;
+  }
+  .icon {
+    width: 55px;
+    text-align: center;
+    color: white;
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+  .icon-img {
+    width: 32px;
+    height: 32px;
+    background-color: #dfdfdf;
+    border: 2px outset #fff;
+    margin: 0 auto 3px auto;
+    line-height: 28px;
+    color: #000;
+    font-weight: bold;
+  }
+
+  /* ウィンドウ共通 */
+  .window {
+    display: none;
+    position: absolute;
+    top: 15px;
+    left: 10px;
+    width: 236px;
+    background-color: #c0c0c0;
+    border: 2px outset #fff;
+    box-shadow: 1px 1px 0px #000;
+    z-index: 10;
+  }
+  .title-bar {
+    background: #000080;
+    color: white;
+    padding: 3px 5px;
+    font-weight: bold;
+  }
+  .title-text { float: left; }
+  .close-btn {
+    float: right;
+    background: #c0c0c0;
+    color: black;
+    border: 1px outset #fff;
+    width: 14px;
+    height: 14px;
+    line-height: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .clear { clear: both; }
+  .window-body {
+    padding: 6px;
+    color: #000;
+    margin: 2px;
+  }
+
+  /* 電卓用のスタイル */
+  .calc-display {
+    width: 100%;
+    height: 22px;
+    background: #fff;
+    border: 2px inset #fff;
+    text-align: right;
+    padding: 2px;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .calc-btn-row {
+    margin-bottom: 4px;
+  }
+  .calc-btn {
+    width: 22%;
+    height: 24px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 2%;
+  }
+
+  /* マインスイーパー用のスタイル (4x4のミニ版でDSiの低負荷に対応) */
+  .mines-grid {
+    width: 120px;
+    margin: 0 auto;
+  }
+  .mines-row { clear: both; }
+  .mine-cell {
+    float: left;
+    width: 25px;
+    height: 25px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    text-align: center;
+    line-height: 21px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .mine-cell.open {
+    border: 1px solid #777;
+    background: #ddd;
+  }
+
+  /* スタートメニュー */
+  .start-menu {
+    display: none;
+    position: absolute;
+    bottom: 26px;
+    left: 2px;
+    width: 120px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    z-index: 200;
+    box-shadow: 2px 2px 5px #000;
+  }
+  .start-menu-item {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-bottom: 1px dashed #999;
+  }
+  .start-menu-item:hover, .start-menu-item:active {
+    background: #000080;
+    color: white;
+  }
+
+  /* タスクバー */
+  .taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 26px;
+    background-color: #c0c0c0;
+    border-top: 2px outset #fff;
+    padding: 2px;
+    z-index: 100;
+  }
+  .start-btn {
+    float: left;
+    background-color: #c0c0c0;
+    border: 2px outset #fff;
+    padding: 1px 6px;
+    font-weight: bold;
+    cursor: pointer;
+    height: 20px;
+  }
+  .start-btn.active { border: 2px inset #fff; }
+  .clock {
+    float: right;
+    border: 2px inset #fff;
+    padding: 1px 6px;
+    height: 20px;
+    background-color: #c0c0c0;
+  }
+</style>
+
+<script>
+  // 共通ウィンドウ制御
+  function toggleWindow(id, state) {
+    document.getElementById(id).style.display = state ? 'block' : 'none';
+    if(state) toggleStartMenu(false); // ウィンドウを開いたらメニューは閉じる
+  }
+
+  // スタートメニュー制御
+  function toggleStartMenu(forcedState) {
+    var menu = document.getElementById('start-menu');
+    var btn = document.getElementById('start-btn');
+    var isVisible = (forcedState !== undefined) ? !forcedState : (menu.style.display === 'block');
+    
+    if (isVisible) {
+      menu.style.display = 'none';
+      btn.className = 'start-btn';
+    } else {
+      menu.style.display = 'block';
+      btn.className = 'start-btn active';
+    }
+  }
+
+  // 電卓の処理 (evalを使わずDSiでも安全に動作する簡易実装)
+  var calcNum1 = '', calcNum2 = '', calcOp = '';
+  function calcInput(val) {
+    var disp = document.getElementById('calc-disp');
+    if (!isNaN(val)) {
+      if (!calcOp) { calcNum1 += val; disp.innerText = calcNum1; }
+      else { calcNum2 += val; disp.innerText = calcNum2; }
+    } else if (val === 'C') {
+      calcNum1 = ''; calcNum2 = ''; calcOp = ''; disp.innerText = '0';
+    } else if (val === '=') {
+      if (calcNum1 && calcNum2 && calcOp) {
+        var n1 = parseInt(calcNum1, 10), n2 = parseInt(calcNum2, 10), res = 0;
+        if (calcOp === '+') res = n1 + n2;
+        if (calcOp === '-') res = n1 - n2;
+        if (calcOp === '*') res = n1 * n2;
+        disp.innerText = res;
+        calcNum1 = '' + res; calcNum2 = ''; calcOp = '';
+      }
+    } else {
+      if (calcNum1) calcOp = val;
+    }
+  }
+
+  // マインスイーパーの処理 (DSi向け4x4・爆弾3個固定)
+  var mineField = [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]; // 初期配置
+  var mineOpened = 0;
+  function clickCell(idx, btn) {
+    if (btn.className.indexOf('open') !== -1) return;
+    if (mineField[idx] === 1) {
+      btn.style.background = 'red'; btn.innerText = '💣';
+      alert('ゲームオーバー！');
+      resetMines();
+    } else {
+      btn.className = 'mine-cell open';
+      // 周辺の爆弾数をカウント
+      var count = 0;
+      var row = Math.floor(idx / 4), col = idx % 4;
+      for(var r = -1; r <= 1; r++) {
+        for(var c = -1; c <= 1; c++) {
+          var nr = row + r, nc = col + c;
+          if (nr >= 0 && nr < 4 && nc >= 0 && nc < 4) {
+            if (mineField[nr * 4 + nc] === 1) count++;
+          }
+        }
+      }
+      btn.innerText = count > 0 ? count : '';
+      mineOpened++;
+      if (mineOpened === 13) { alert('クリア！おめでとう！'); resetMines(); }
+    }
+  }
+  function resetMines() {
+    mineOpened = 0;
+    var cells = document.getElementsByClassName('mine-cell');
+    for(var i=0; i<cells.length; i++) {
+      cells[i].className = 'mine-cell'; cells[i].innerText = ''; cells[i].style.background = '#c0c0c0';
+    }
+    // 爆弾位置を簡易シャッフル
+    mineField.sort(function() { return Math.random() - 0.5; });
+  }
+</script>
+</head>
+<body onclick="if(event.target.id!=='start-btn') toggleStartMenu(false);">
+
+  <!-- デスクトップアイコン -->
+  <div class="icon-list">
+    <div class="icon" onclick="toggleWindow('win-calc', true)">
+      <div class="icon-img">＋－</div>
+      <div>電卓</div>
+    </div>
+    <div class="icon" onclick="toggleWindow('win-mines', true)">
+      <div class="icon-img">💣</div>
+      <div>マイン</div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：電卓 -->
+  <div class="window" id="win-calc">
+    <div class="title-bar">
+      <div class="title-text">電卓</div>
+      <div class="close-btn" onclick="toggleWindow('win-calc', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="calc-display" id="calc-disp">0</div>
+      <div class="calc-btn-row">
+        <button class="calc-btn" onclick="calcInput('7')">7</button>
+        <button class="calc-btn" onclick="calcInput('8')">8</button>
+        <button class="calc-btn" onclick="calcInput('9')">9</button>
+        <button class="calc-btn" onclick="calcInput('+')">+</button>
+      </div>
+      <div class="calc-btn-row">
+        <button class="calc-btn" onclick="calcInput('4')">4</button>
+        <button class="calc-btn" onclick="calcInput('5')">5</button>
+        <button class="calc-btn" onclick="calcInput('6')">6</button>
+        <button class="calc-btn" onclick="calcInput('-')">-</button>
+      </div>
+      <div class="calc-btn-row">
+        <button class="calc-btn" onclick="calcInput('1')">1</button>
+        <button class="calc-btn" onclick="calcInput('2')">2</button>
+        <button class="calc-btn" onclick="calcInput('3')">3</button>
+        <button class="calc-btn" onclick="calcInput('*')">*</button>
+      </div>
+      <div class="calc-btn-row">
+        <button class="calc-btn" onclick="calcInput('0')">0</button>
+        <button class="calc-btn" onclick="calcInput('C')">C</button>
+        <button class="calc-btn" style="width:46%" onclick="calcInput('=')">=</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：マインスイーパー -->
+  <div class="window" id="win-mines" style="top:30px; left:15px;">
+    <div class="title-bar">
+      <div class="title-text">Minesweeper</div>
+      <div class="close-btn" onclick="toggleWindow('win-mines', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body" style="text-align:center;">
+      <div style="margin-bottom:5px;">爆弾を避けてパネルを開け！</div>
+      <div class="mines-grid">
+        <div class="mines-row">
+          <div class="mine-cell" onclick="clickCell(0, this)"></div>
+          <div class="mine-cell" onclick="clickCell(1, this)"></div>
+          <div class="mine-cell" onclick="clickCell(2, this)"></div>
+          <div class="mine-cell" onclick="clickCell(3, this)"></div>
+        </div>
+        <div class="mines-row">
+          <div class="mine-cell" onclick="clickCell(4, this)"></div>
+          <div class="mine-cell" onclick="clickCell(5, this)"></div>
+          <div class="mine-cell" onclick="clickCell(6, this)"></div>
+          <div class="mine-cell" onclick="clickCell(7, this)"></div>
+        </div>
+        <div class="mines-row">
+          <div class="mine-cell" onclick="clickCell(8, this)"></div>
+          <div class="mine-cell" onclick="clickCell(9, this)"></div>
+          <div class="mine-cell" onclick="clickCell(10, this)"></div>
+          <div class="mine-cell" onclick="clickCell(11, this)"></div>
+        </div>
+        <div class="mines-row">
+          <div class="mine-cell" onclick="clickCell(12, this)"></div>
+          <div class="mine-cell" onclick="clickCell(13, this)"></div>
+          <div class="mine-cell" onclick="clickCell(14, this)"></div>
+          <div class="mine-cell" onclick="clickCell(15, this)"></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="start-menu" id="start-menu">
+    <div class="start-menu-item" onclick="toggleWindow('win-calc', true)">🧮 電卓</div>
+    <div class="start-menu-item" onclick="toggleWindow('win-mines', true)">💣 マイン</div>
+    <div class="start-menu-item" onclick="alert('DSiブラウザ版 Windows\n2026年アップデート版');">ℹ️ バージョン情報</div>
+  </div>
+
+  <div class="taskbar">
+    <div class="start-btn" id="start-btn" onclick="event.stopPropagation(); toggleStartMenu();">スタート</div>
+    <div class="clock">13:25</div>
+    <div class="clear"></div>
+  </div>
+
+</body>
+</html>
