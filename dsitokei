@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=256, initial-scale=1.0, user-scalable=no">
+<title>DSi Clock v2</title>
+<style>
+  /* ページ全体の初期化とスクロール禁止 */
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 256px;
+    height: 384px;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: monospace;
+    overflow: hidden;
+  }
+
+  /* 上画面（デジタル時計）: 高さ192px */
+  #top-screen {
+    width: 256px;
+    height: 192px;
+    box-sizing: border-box;
+    border-bottom: 2px solid #333333;
+    text-align: center;
+    padding-top: 50px;
+  }
+  #date-display {
+    font-size: 16px;
+    color: #aaaaaa;
+    margin-bottom: 10px;
+  }
+  #digital-clock {
+    font-size: 32px;
+    font-weight: bold;
+    color: #00ffcc;
+  }
+
+  /* 下画面（アナログ時計）: 高さ192px */
+  #bottom-screen {
+    width: 256px;
+    height: 192px;
+    position: relative;
+    box-sizing: border-box;
+  }
+
+  /* アナログ時計の文字盤 */
+  #clock-face {
+    width: 140px;
+    height: 140px;
+    border: 4px solid #ffffff;
+    border-radius: 50%;
+    position: absolute;
+    top: 22px;
+    left: 54px;
+    box-sizing: border-box;
+  }
+
+  /* --- 追加した数字の配置設定 --- */
+  /* 中心点（128px, 92px）から逆算して、文字のサイズ（横16px・縦16px）の半分を考慮して配置 */
+  .clock-number {
+    position: absolute;
+    width: 20px;
+    height: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    color: #ffffff;
+  }
+  #num-12 { top: 28px;  left: 118px; } /* 12時 */
+  #num-3  { top: 84px;  left: 174px; } /*  3時 */
+  #num-6  { top: 140px; left: 118px; } /*  6時 */
+  #num-9  { top: 84px;  left: 62px;  } /*  9時 */
+
+  /* 時計の針の共通設定 */
+  .hand {
+    position: absolute;
+    bottom: 96px; /* 192 / 2 */
+    left: 126px;  /* 256 / 2 - 針の幅の半分 */
+    transform-origin: bottom center;
+  }
+
+  /* 時針・分針・秒針のスタイル */
+  #hour-hand {
+    width: 4px;
+    height: 35px;
+    background-color: #ffffff;
+    left: 126px;
+    z-index: 3;
+  }
+  #min-hand {
+    width: 3px;
+    height: 52px;
+    background-color: #cccccc;
+    left: 126px;
+    z-index: 2;
+  }
+  #sec-hand {
+    width: 1px;
+    height: 58px;
+    background-color: #ff3333;
+    left: 127px;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 上画面 -->
+  <div id="top-screen">
+    <div id="date-display">0000/00/00 (---)</div>
+    <div id="digital-clock">00:00:00</div>
+  </div>
+
+  <!-- 下画面 -->
+  <div id="bottom-screen">
+    <!-- 外枠の円 -->
+    <div id="clock-face"></div>
+    
+    <!-- 文字盤の数字 -->
+    <div id="num-12" class="clock-number">12</div>
+    <div id="num-3" class="clock-number">3</div>
+    <div id="num-6" class="clock-number">6</div>
+    <div id="num-9" class="clock-number">9</div>
+
+    <!-- 時計の針 -->
+    <div id="hour-hand" class="hand"></div>
+    <div id="min-hand" class="hand"></div>
+    <div id="sec-hand" class="hand"></div>
+  </div>
+
+<script type="text/javascript">
+  function updateClock() {
+    var now = new Date();
+    
+    // --- デジタル時計の処理 ---
+    var year = now.getFullYear();
+    var month = now.getMonth() + 1;
+    var date = now.getDate();
+    var dayList = ['日', '月', '火', '水', '木', '金', '土'];
+    var day = dayList[now.getDay()];
+    
+    var hours = now.getHours();
+    var minutes = now.getMinutes();
+    var seconds = now.getSeconds();
+
+    if (month < 10) month = "0" + month;
+    if (date < 10) date = "0" + date;
+    if (hours < 10) hours = "0" + hours;
+    if (minutes < 10) minutes = "0" + minutes;
+    if (seconds < 10) seconds = "0" + seconds;
+
+    document.getElementById('date-display').innerHTML = year + '/' + month + '/' + date + ' (' + day + ')';
+    document.getElementById('digital-clock').innerHTML = hours + ':' + minutes + ':' + seconds;
+
+    // --- アナログ時計の処理 ---
+    var h = now.getHours() % 12;
+    var m = now.getMinutes();
+    var s = now.getSeconds();
+
+    var hDeg = (h * 30) + (m * 0.5);
+    var mDeg = (m * 6) + (s * 0.1);
+    var sDeg = s * 6;
+
+    var hHand = document.getElementById('hour-hand');
+    var mHand = document.getElementById('min-hand');
+    var sHand = document.getElementById('sec-hand');
+
+    var hStyle = "rotate(" + hDeg + "deg)";
+    var mStyle = "rotate(" + mDeg + "deg)";
+    var sStyle = "rotate(" + sDeg + "deg)";
+
+    hHand.style.WebkitTransform = hStyle; hHand.style.transform = hStyle;
+    mHand.style.WebkitTransform = mStyle; mHand.style.transform = mStyle;
+    sHand.style.WebkitTransform = sStyle; sHand.style.transform = sStyle;
+  }
+
+  setInterval(updateClock, 1000);
+  updateClock();
+</script>
+</body>
+</html>
