@@ -143,10 +143,32 @@
     padding: 6px 10px;
     cursor: pointer;
     border-bottom: 1px dashed #999;
+    color: #000;
   }
-  .start-menu-item:hover, .start-menu-item:active {
+  .start-menu-item:hover, .start-menu-item:active, .start-menu-item.open {
     background: #000080;
     color: white;
+  }
+  .start-menu-item .arrow { float: right; }
+  .start-menu-sep {
+    height: 0;
+    border-top: 1px solid #808080;
+    border-bottom: 1px solid #fff;
+    margin: 2px 0;
+  }
+
+  /* 階層メニュー(サブメニュー) */
+  .menu-group { position: relative; }
+  .submenu {
+    display: none;
+    position: absolute;
+    top: -2px;
+    left: 112px;
+    width: 126px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    z-index: 210;
+    box-shadow: 2px 2px 5px #000;
   }
 
   /* タスクバー */
@@ -178,31 +200,248 @@
     height: 20px;
     background-color: #c0c0c0;
   }
+
+  /* タスクバーを上に表示する設定 */
+  body.tb-top .taskbar { top: 0; bottom: auto; border-top: 0; border-bottom: 2px outset #fff; }
+  body.tb-top .start-menu { top: 26px; bottom: auto; }
+  body.tb-top .window { margin-top: 26px; }
+  body.tb-top .icon-list { padding-top: 34px; }
+
+  /* フォルダ・設定ウィンドウ共通 */
+  .folder-view {
+    background: #fff;
+    border: 2px inset #fff;
+    padding: 4px;
+    min-height: 70px;
+    color: #000;
+  }
+  .win-icon {
+    float: left;
+    width: 52px;
+    text-align: center;
+    margin: 2px;
+    cursor: pointer;
+    color: #000;
+  }
+  .btn {
+    width: 70px;
+    height: 22px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    cursor: pointer;
+    margin-right: 6px;
+    color: #000;
+  }
+  .color-btn {
+    float: left;
+    width: 32px;
+    height: 22px;
+    border: 2px outset #fff;
+    margin: 0 4px 4px 0;
+    cursor: pointer;
+  }
+  .opt-line { margin-bottom: 6px; color: #000; }
+  .help-item {
+    padding: 4px 6px;
+    cursor: pointer;
+    border-bottom: 1px dotted #999;
+    color: #000;
+  }
+  .help-item:hover, .help-item:active { background: #000080; color: white; }
+  .help-text {
+    height: 100px;
+    overflow: auto;
+    background: #fff;
+    border: 2px inset #fff;
+    padding: 4px;
+    color: #000;
+    line-height: 14px;
+    margin-bottom: 6px;
+  }
+
+  /* 全画面表示(シャットダウン・再起動・ログオン) */
+  .screen {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+  }
+  #screen-msg {
+    background: #000;
+    text-align: center;
+    padding-top: 70px;
+    line-height: 18px;
+  }
+  #screen-login { background: #008080; }
+  .login-box {
+    position: absolute;
+    top: 30px;
+    left: 18px;
+    width: 220px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    box-shadow: 1px 1px 0px #000;
+  }
+  .login-box input {
+    width: 100%;
+    height: 20px;
+    border: 2px inset #fff;
+    background: #fff;
+    color: #000;
+    padding: 1px 3px;
+  }
 </style>
 
 <script>
-  // 共通ウィンドウ制御
+  // ===== 共通ウィンドウ制御 =====
+  var topZ = 10;
+  function raiseWindow(el) {
+    // タスクバー(z-index:100)より手前に出ないよう、上限に達したら振り直す
+    if (topZ >= 90) {
+      var all = document.getElementsByClassName('window');
+      for (var i = 0; i < all.length; i++) all[i].style.zIndex = 10;
+      topZ = 10;
+    }
+    topZ++;
+    el.style.zIndex = topZ;
+  }
   function toggleWindow(id, state) {
-    document.getElementById(id).style.display = state ? 'block' : 'none';
-    if(state) toggleStartMenu(false); // ウィンドウを開いたらメニューは閉じる
+    var w = document.getElementById(id);
+    w.style.display = state ? 'block' : 'none';
+    if (state) {
+      raiseWindow(w);
+      toggleStartMenu(false); // ウィンドウを開いたらメニューは閉じる
+    }
+  }
+  function closeAllWindows() {
+    var all = document.getElementsByClassName('window');
+    for (var i = 0; i < all.length; i++) all[i].style.display = 'none';
   }
 
-  // スタートメニュー制御
+  // ===== スタートメニュー制御 =====
   function toggleStartMenu(forcedState) {
     var menu = document.getElementById('start-menu');
     var btn = document.getElementById('start-btn');
     var isVisible = (forcedState !== undefined) ? !forcedState : (menu.style.display === 'block');
-    
+
     if (isVisible) {
       menu.style.display = 'none';
       btn.className = 'start-btn';
+      closeSubs();
     } else {
       menu.style.display = 'block';
       btn.className = 'start-btn active';
     }
   }
 
-  // 電卓の処理 (evalを使わずDSiでも安全に動作する簡易実装)
+  // サブメニュー(階層メニュー)の開閉
+  var subNames = ['programs', 'settings'];
+  function closeSubs() {
+    for (var i = 0; i < subNames.length; i++) {
+      document.getElementById('sub-' + subNames[i]).style.display = 'none';
+      document.getElementById('item-' + subNames[i]).className = 'start-menu-item';
+    }
+  }
+  function toggleSub(name) {
+    var sub = document.getElementById('sub-' + name);
+    var show = (sub.style.display !== 'block');
+    closeSubs();
+    if (show) {
+      sub.style.display = 'block';
+      document.getElementById('item-' + name).className = 'start-menu-item open';
+    }
+  }
+
+  // ===== 設定:デスクトップの色 / 時計 / タスクバー位置 =====
+  function setDesktop(color) {
+    document.body.style.backgroundColor = color;
+    document.documentElement.style.backgroundColor = color;
+  }
+  function setClock(show) {
+    document.getElementById('clock').style.display = show ? 'block' : 'none';
+  }
+  function setTaskbar(pos) {
+    document.body.className = (pos === 'top') ? 'tb-top' : '';
+  }
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function updateClock() {
+    var d = new Date();
+    document.getElementById('clock').innerHTML = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function showDateTime() {
+    var d = new Date();
+    alert('現在の日付と時刻\n' + d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+          pad2(d.getHours()) + ':' + pad2(d.getMinutes()));
+  }
+
+  // ===== ヘルプ =====
+  var helpTopics = [
+    {
+      t: 'Windowsの基本操作',
+      b: '・画面全体を「デスクトップ」と呼びます。<br>・アイコンをタッチ(クリック)するとアプリが開きます。<br>・ウィンドウ右上の「×」で閉じます。<br>・画面の端の帯が「タスクバー」です。左端の「スタート」でスタートメニューを開きます。'
+    },
+    {
+      t: 'スタートメニューの使い方',
+      b: '・「▶」のついた項目をタッチすると、中身(サブメニュー)が開きます。<br>・プログラム…電卓・マインなどのアプリとフォルダ<br>・設定…コントロールパネル・プリンタ・タスクバー<br>・ヘルプ…このヘルプです<br>・終了…シャットダウン、再起動、別ユーザーでログオン'
+    },
+    {
+      t: '電卓・マインの使い方',
+      b: '【電卓】数字→演算子(+ - *)→数字→「=」の順にタッチ。「C」でクリア。整数のみ扱えます。<br>【マイン】4×4のパネルのうち、爆弾(3個)以外をすべて開けばクリア。数字は周囲の爆弾の数です。'
+    },
+    {
+      t: '画面や表示を変えたい',
+      b: '・デスクトップの色:「設定」→「コントロールパネル」→「画面」<br>・時計の表示/非表示、タスクバーの位置:「設定」→「タスクバー」<br>※設定はページを読み込み直すと元に戻ります。'
+    },
+    {
+      t: 'トラブルシューティング',
+      b: '【このページで困ったら】<br>・ウィンドウが開かない/メニューが消えない → メニューの外をタッチして閉じ、もう一度操作してください。<br>・表示が崩れた/動かない → 「終了」→「再起動」、またはブラウザで再読み込み。<br>・マインで爆弾に当たった → 自動でリセットされます。<br>【本物のWindows 95の場合】<br>・アプリが応答しない → Ctrl+Alt+Delで「プログラムの強制終了」。<br>・起動しない → 起動中にF8キーを押して「セーフモード」を選択。<br>・動作が遅い → 使っていないアプリを閉じて再起動。'
+    }
+  ];
+  function showHelp(i) {
+    document.getElementById('help-text').innerHTML = '<b>' + helpTopics[i].t + '</b><br><br>' + helpTopics[i].b;
+    document.getElementById('help-list').style.display = 'none';
+    document.getElementById('help-view').style.display = 'block';
+  }
+  function helpBack() {
+    document.getElementById('help-view').style.display = 'none';
+    document.getElementById('help-list').style.display = 'block';
+  }
+
+  // ===== 終了(シャットダウン / 再起動 / ログオフ) =====
+  function showScreen(html, color, clickToBoot) {
+    var s = document.getElementById('screen-msg');
+    s.innerHTML = html;
+    s.style.color = color;
+    s.style.display = 'block';
+    s.onclick = clickToBoot ? function() { location.reload(); } : null;
+  }
+  function doShutdown() {
+    var opts = document.getElementsByName('shutopt');
+    var v = 'shutdown';
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].checked) v = opts[i].value;
+    }
+    toggleWindow('win-shut', false);
+    if (v === 'shutdown') {
+      showScreen('Windows をシャットダウンしました。<br>電源を安全に切ることができます。<br><br><span style="font-size:10px;color:#888;">(画面をタッチすると電源が入ります)</span>', '#ff9900', true);
+    } else if (v === 'restart') {
+      showScreen('Windows を再起動しています...', '#c0c0c0', false);
+      setTimeout(function() { location.reload(); }, 1800);
+    } else {
+      closeAllWindows();
+      document.getElementById('screen-login').style.display = 'block';
+    }
+  }
+  function doLogin() {
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('login-pass').value = '';
+    toggleStartMenu(false);
+  }
+
+  // ===== 電卓の処理 (evalを使わずDSiでも安全に動作する簡易実装) =====
   var calcNum1 = '', calcNum2 = '', calcOp = '';
   function calcInput(val) {
     var disp = document.getElementById('calc-disp');
@@ -225,7 +464,7 @@
     }
   }
 
-  // マインスイーパーの処理 (DSi向け4x4・爆弾3個固定)
+  // ===== マインスイーパーの処理 (DSi向け4x4・爆弾3個固定) =====
   var mineField = [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]; // 初期配置
   var mineOpened = 0;
   function clickCell(idx, btn) {
@@ -278,7 +517,7 @@
   </div>
 
   <!-- ウィンドウ：電卓 -->
-  <div class="window" id="win-calc">
+  <div class="window" id="win-calc" onmousedown="raiseWindow(this)">
     <div class="title-bar">
       <div class="title-text">電卓</div>
       <div class="close-btn" onclick="toggleWindow('win-calc', false)">×</div>
@@ -313,7 +552,7 @@
   </div>
 
   <!-- ウィンドウ：マインスイーパー -->
-  <div class="window" id="win-mines" style="top:30px; left:15px;">
+  <div class="window" id="win-mines" style="top:30px; left:15px;" onmousedown="raiseWindow(this)">
     <div class="title-bar">
       <div class="title-text">Minesweeper</div>
       <div class="close-btn" onclick="toggleWindow('win-mines', false)">×</div>
@@ -351,17 +590,233 @@
     </div>
   </div>
 
+  <!-- ウィンドウ：マイコンピュータ -->
+  <div class="window" id="win-mycomp" style="top:20px; left:8px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">マイ コンピュータ</div>
+      <div class="close-btn" onclick="toggleWindow('win-mycomp', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view">
+        <div class="win-icon" onclick="alert('A:\\ にディスクが入っていません。')"><div class="icon-img">A:</div><div>3.5FD</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-cdrive', true)"><div class="icon-img">C:</div><div>ディスク</div></div>
+        <div class="win-icon" onclick="alert('D:\\ にCD-ROMが入っていません。')"><div class="icon-img">D:</div><div>CD-ROM</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-ctrl', true)"><div class="icon-img">設定</div><div>コントロール</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-printer', true)"><div class="icon-img">印刷</div><div>プリンタ</div></div>
+        <div class="clear"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：C:\ -->
+  <div class="window" id="win-cdrive" style="top:26px; left:12px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">C:\</div>
+      <div class="close-btn" onclick="toggleWindow('win-cdrive', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view">
+        <div class="win-icon" onclick="alert('システムフォルダです。')"><div class="icon-img">📁</div><div>Windows</div></div>
+        <div class="win-icon" onclick="alert('マイ ドキュメントは空です。')"><div class="icon-img">📁</div><div>ドキュメント</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-calc', true)"><div class="icon-img">＋－</div><div>電卓</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-mines', true)"><div class="icon-img">💣</div><div>マイン</div></div>
+        <div class="clear"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：ごみ箱 -->
+  <div class="window" id="win-trash" style="top:32px; left:16px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">ごみ箱</div>
+      <div class="close-btn" onclick="toggleWindow('win-trash', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view">ごみ箱は空です。</div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：コントロールパネル -->
+  <div class="window" id="win-ctrl" style="top:20px; left:8px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">コントロール パネル</div>
+      <div class="close-btn" onclick="toggleWindow('win-ctrl', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view">
+        <div class="win-icon" onclick="toggleWindow('win-display', true)"><div class="icon-img">画面</div><div>画面</div></div>
+        <div class="win-icon" onclick="showDateTime()"><div class="icon-img">時刻</div><div>日付/時刻</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-printer', true)"><div class="icon-img">印刷</div><div>プリンタ</div></div>
+        <div class="win-icon" onclick="toggleWindow('win-taskbar', true)"><div class="icon-img">バー</div><div>タスクバー</div></div>
+        <div class="clear"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：画面のプロパティ -->
+  <div class="window" id="win-display" style="top:30px; left:14px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">画面のプロパティ</div>
+      <div class="close-btn" onclick="toggleWindow('win-display', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="opt-line">デスクトップの色を選んでください:</div>
+      <div class="folder-view" style="min-height:40px;">
+        <div class="color-btn" style="background:#008080;" onclick="setDesktop('#008080')"></div>
+        <div class="color-btn" style="background:#000080;" onclick="setDesktop('#000080')"></div>
+        <div class="color-btn" style="background:#808080;" onclick="setDesktop('#808080')"></div>
+        <div class="color-btn" style="background:#008000;" onclick="setDesktop('#008000')"></div>
+        <div class="color-btn" style="background:#800000;" onclick="setDesktop('#800000')"></div>
+        <div class="color-btn" style="background:#000000;" onclick="setDesktop('#000000')"></div>
+        <div class="clear"></div>
+      </div>
+      <div style="margin-top:6px;"><button class="btn" onclick="toggleWindow('win-display', false)">閉じる</button></div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：プリンタ -->
+  <div class="window" id="win-printer" style="top:26px; left:12px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">プリンタ</div>
+      <div class="close-btn" onclick="toggleWindow('win-printer', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view">
+        <div class="win-icon" onclick="alert('プリンタの追加はできません。\nこの環境にはプリンタが接続されていません。')"><div class="icon-img">＋</div><div>プリンタの追加</div></div>
+        <div class="clear"></div>
+        <div style="margin-top:6px;">インストールされているプリンタはありません。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：タスクバーのプロパティ -->
+  <div class="window" id="win-taskbar" style="top:30px; left:14px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">タスクバーのプロパティ</div>
+      <div class="close-btn" onclick="toggleWindow('win-taskbar', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="folder-view" style="min-height:60px;">
+        <div class="opt-line"><label><input type="checkbox" id="chk-clock" checked onclick="setClock(this.checked)"> 時計を表示する</label></div>
+        <div class="opt-line">タスクバーの位置:</div>
+        <div class="opt-line">
+          <label><input type="radio" name="tbpos" value="bottom" checked onclick="setTaskbar('bottom')"> 下</label>
+          &nbsp;&nbsp;
+          <label><input type="radio" name="tbpos" value="top" onclick="setTaskbar('top')"> 上</label>
+        </div>
+      </div>
+      <div style="margin-top:6px;"><button class="btn" onclick="toggleWindow('win-taskbar', false)">閉じる</button></div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：ヘルプ -->
+  <div class="window" id="win-help" style="top:16px; left:10px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">Windows ヘルプ</div>
+      <div class="close-btn" onclick="toggleWindow('win-help', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div id="help-list">
+        <div class="opt-line">知りたい項目をタッチしてください:</div>
+        <div class="folder-view" style="padding:0;">
+          <div class="help-item" onclick="showHelp(0)">Windowsの基本操作</div>
+          <div class="help-item" onclick="showHelp(1)">スタートメニューの使い方</div>
+          <div class="help-item" onclick="showHelp(2)">電卓・マインの使い方</div>
+          <div class="help-item" onclick="showHelp(3)">画面や表示を変えたい</div>
+          <div class="help-item" onclick="showHelp(4)">トラブルシューティング</div>
+        </div>
+      </div>
+      <div id="help-view" style="display:none;">
+        <div class="help-text" id="help-text"></div>
+        <button class="btn" onclick="helpBack()">目次へ</button>
+        <button class="btn" onclick="toggleWindow('win-help', false)">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ウィンドウ：Windowsの終了 -->
+  <div class="window" id="win-shut" style="top:24px; left:10px;" onmousedown="raiseWindow(this)">
+    <div class="title-bar">
+      <div class="title-text">Windowsの終了</div>
+      <div class="close-btn" onclick="toggleWindow('win-shut', false)">×</div>
+      <div class="clear"></div>
+    </div>
+    <div class="window-body">
+      <div class="opt-line">コンピュータをどうしますか？</div>
+      <div class="folder-view" style="min-height:60px;">
+        <div class="opt-line"><label><input type="radio" name="shutopt" value="shutdown" checked> コンピュータをシャットダウンする</label></div>
+        <div class="opt-line"><label><input type="radio" name="shutopt" value="restart"> コンピュータを再起動する</label></div>
+        <div class="opt-line"><label><input type="radio" name="shutopt" value="logoff"> 別のユーザーとしてログオンする</label></div>
+      </div>
+      <div style="margin-top:6px; text-align:center;">
+        <button class="btn" onclick="doShutdown()">はい</button>
+        <button class="btn" onclick="toggleWindow('win-shut', false)">いいえ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- スタートメニュー -->
   <div class="start-menu" id="start-menu">
-    <div class="start-menu-item" onclick="toggleWindow('win-calc', true)">🧮 電卓</div>
-    <div class="start-menu-item" onclick="toggleWindow('win-mines', true)">💣 マイン</div>
+    <div class="menu-group">
+      <div class="start-menu-item" id="item-programs" onclick="event.stopPropagation(); toggleSub('programs');">プログラム<span class="arrow">▶</span></div>
+      <div class="submenu" id="sub-programs">
+        <div class="start-menu-item" onclick="toggleWindow('win-calc', true)">🧮 電卓</div>
+        <div class="start-menu-item" onclick="toggleWindow('win-mines', true)">💣 マイン</div>
+        <div class="start-menu-sep"></div>
+        <div class="start-menu-item" onclick="toggleWindow('win-mycomp', true)">マイ コンピュータ</div>
+        <div class="start-menu-item" onclick="toggleWindow('win-trash', true)">ごみ箱</div>
+      </div>
+    </div>
+    <div class="menu-group">
+      <div class="start-menu-item" id="item-settings" onclick="event.stopPropagation(); toggleSub('settings');">設定<span class="arrow">▶</span></div>
+      <div class="submenu" id="sub-settings">
+        <div class="start-menu-item" onclick="toggleWindow('win-ctrl', true)">コントロールパネル</div>
+        <div class="start-menu-item" onclick="toggleWindow('win-printer', true)">プリンタ</div>
+        <div class="start-menu-item" onclick="toggleWindow('win-taskbar', true)">タスクバー</div>
+      </div>
+    </div>
+    <div class="start-menu-item" onclick="helpBack(); toggleWindow('win-help', true)">ヘルプ</div>
     <div class="start-menu-item" onclick="alert('DSiブラウザ版 Windows\n2026年アップデート版');">ℹ️ バージョン情報</div>
+    <div class="start-menu-sep"></div>
+    <div class="start-menu-item" onclick="toggleWindow('win-shut', true)">終了...</div>
   </div>
 
   <div class="taskbar">
     <div class="start-btn" id="start-btn" onclick="event.stopPropagation(); toggleStartMenu();">スタート</div>
-    <div class="clock">13:25</div>
+    <div class="clock" id="clock">13:25</div>
     <div class="clear"></div>
   </div>
 
+  <!-- 全画面：シャットダウン / 再起動 -->
+  <div class="screen" id="screen-msg"></div>
+
+  <!-- 全画面：ログオン -->
+  <div class="screen" id="screen-login">
+    <div class="login-box">
+      <div class="title-bar"><div class="title-text">Windowsへようこそ</div><div class="clear"></div></div>
+      <div class="window-body">
+        <div class="opt-line">ユーザー名とパスワードを入力してください。</div>
+        <div class="opt-line">ユーザー名:<br><input type="text" id="login-user" value="User"></div>
+        <div class="opt-line">パスワード:<br><input type="password" id="login-pass"></div>
+        <div style="text-align:center;">
+          <button class="btn" onclick="doLogin()">OK</button>
+          <button class="btn" onclick="doLogin()">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  updateClock();
+  setInterval(updateClock, 10000);
+</script>
 </body>
 </html>
