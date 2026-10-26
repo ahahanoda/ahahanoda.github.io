@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Windows DSi Edition</title>
 <style>
   /* 全体のリセット */
@@ -316,19 +319,29 @@
       w.setAttribute('data-top', '' + (parseInt(w.style.top, 10) || 15));
     }
     var origTop = parseInt(w.getAttribute('data-top'), 10);
-    var vh = document.documentElement.clientHeight || window.innerHeight || 192;
-    var avail = vh - 26 - 2; // タスクバー分を除いた高さ
-    w.style.height = '';
-    w.style.overflow = '';
-    var h = w.offsetHeight;
-    if (h > avail) {
-      // それでも収まらない場合は画面いっぱいにして、中身をスクロール可能にする
+    try {
+      // 表示領域の高さは、取れる値のうち一番小さいものを採用する
+      var vh = document.documentElement.clientHeight || 192;
+      if (window.innerHeight && window.innerHeight < vh) vh = window.innerHeight;
+      var avail = vh - 26 - 2; // タスクバー分を除いた高さ
+      var tb = document.getElementById('taskbar');
+      if (document.body.className !== 'tb-top' && tb && tb.offsetTop > 0 && tb.offsetTop - 2 < avail) {
+        avail = tb.offsetTop - 2; // タスクバーの実際の位置を上限にする
+      }
+      w.style.height = '';
+      w.style.overflow = '';
+      var h = w.offsetHeight;
+      if (h > avail) {
+        // 収まらない場合は画面いっぱいにして、中身をスクロール可能にする
+        w.style.top = '0px';
+        w.style.height = avail + 'px';
+        w.style.overflow = 'auto';
+      } else {
+        var t = avail - h;
+        w.style.top = (t < origTop ? t : origTop) + 'px';
+      }
+    } catch (e) {
       w.style.top = '0px';
-      w.style.height = avail + 'px';
-      w.style.overflow = 'auto';
-    } else {
-      var t = avail - h;
-      w.style.top = (t < origTop ? t : origTop) + 'px';
     }
   }
   function fitOpenWindows() {
@@ -776,20 +789,20 @@
   </div>
 
   <!-- ウィンドウ：Windowsの終了 -->
-  <div class="window compact" id="win-shut" style="top:24px; left:10px;" onmousedown="raiseWindow(this)">
+  <div class="window compact" id="win-shut" style="top:4px; left:10px;" onmousedown="raiseWindow(this)">
     <div class="title-bar">
       <div class="title-text">Windowsの終了</div>
       <div class="close-btn" onclick="toggleWindow('win-shut', false)">×</div>
       <div class="clear"></div>
     </div>
-    <div class="window-body">
-      <div class="opt-line">コンピュータをどうしますか？</div>
-      <div class="folder-view" style="min-height:60px;">
-        <div class="opt-line"><label><input type="radio" name="shutopt" value="shutdown" checked> コンピュータをシャットダウンする</label></div>
-        <div class="opt-line"><label><input type="radio" name="shutopt" value="restart"> コンピュータを再起動する</label></div>
-        <div class="opt-line"><label><input type="radio" name="shutopt" value="logoff"> 別のユーザーとしてログオンする</label></div>
+    <div class="window-body" style="padding:3px; margin:1px;">
+      <div class="opt-line" style="margin-bottom:2px;">コンピュータをどうしますか？</div>
+      <div class="folder-view" style="min-height:0; padding:2px;">
+        <div class="opt-line" style="margin-bottom:2px;"><label><input type="radio" name="shutopt" value="shutdown" checked> コンピュータをシャットダウンする</label></div>
+        <div class="opt-line" style="margin-bottom:2px;"><label><input type="radio" name="shutopt" value="restart"> コンピュータを再起動する</label></div>
+        <div class="opt-line" style="margin-bottom:0;"><label><input type="radio" name="shutopt" value="logoff"> 別のユーザーとしてログオンする</label></div>
       </div>
-      <div style="margin-top:6px; text-align:center;">
+      <div style="margin-top:4px; text-align:center;">
         <button class="btn" onclick="doShutdown()">はい</button>
         <button class="btn" onclick="toggleWindow('win-shut', false)">いいえ</button>
       </div>
@@ -817,12 +830,12 @@
       </div>
     </div>
     <div class="start-menu-item" onclick="helpBack(); toggleWindow('win-help', true)">ヘルプ</div>
-    <div class="start-menu-item" onclick="alert('DSiブラウザ版 Windows\n2026年アップデート版');">ℹ️ バージョン情報</div>
+    <div class="start-menu-item" onclick="alert('DSiブラウザ版 Windows\n2026年アップデート版\nビルド: 3 (画面内フィット対応)');">ℹ️ バージョン情報</div>
     <div class="start-menu-sep"></div>
     <div class="start-menu-item" onclick="toggleWindow('win-shut', true)">終了...</div>
   </div>
 
-  <div class="taskbar">
+  <div class="taskbar" id="taskbar">
     <div class="start-btn" id="start-btn" onclick="event.stopPropagation(); toggleStartMenu();">スタート</div>
     <div class="clock" id="clock">13:25</div>
     <div class="clear"></div>
