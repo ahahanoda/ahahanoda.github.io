@@ -241,6 +241,8 @@
     cursor: pointer;
   }
   .opt-line { margin-bottom: 6px; color: #000; }
+  .compact .window-body { padding: 4px; }
+  .compact .opt-line { margin-bottom: 3px; }
   .help-item {
     padding: 4px 6px;
     cursor: pointer;
@@ -308,11 +310,39 @@
     topZ++;
     el.style.zIndex = topZ;
   }
+  // ウィンドウが画面(タスクバーの手前)に収まるよう位置・高さを調整する
+  function fitWindow(w) {
+    if (!w.getAttribute('data-top')) {
+      w.setAttribute('data-top', '' + (parseInt(w.style.top, 10) || 15));
+    }
+    var origTop = parseInt(w.getAttribute('data-top'), 10);
+    var vh = document.documentElement.clientHeight || window.innerHeight || 192;
+    var avail = vh - 26 - 2; // タスクバー分を除いた高さ
+    w.style.height = '';
+    w.style.overflow = '';
+    var h = w.offsetHeight;
+    if (h > avail) {
+      // それでも収まらない場合は画面いっぱいにして、中身をスクロール可能にする
+      w.style.top = '0px';
+      w.style.height = avail + 'px';
+      w.style.overflow = 'auto';
+    } else {
+      var t = avail - h;
+      w.style.top = (t < origTop ? t : origTop) + 'px';
+    }
+  }
+  function fitOpenWindows() {
+    var all = document.getElementsByClassName('window');
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].style.display === 'block') fitWindow(all[i]);
+    }
+  }
   function toggleWindow(id, state) {
     var w = document.getElementById(id);
     w.style.display = state ? 'block' : 'none';
     if (state) {
       raiseWindow(w);
+      fitWindow(w);
       toggleStartMenu(false); // ウィンドウを開いたらメニューは閉じる
     }
   }
@@ -365,6 +395,7 @@
   }
   function setTaskbar(pos) {
     document.body.className = (pos === 'top') ? 'tb-top' : '';
+    fitOpenWindows();
   }
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
   function updateClock() {
@@ -404,10 +435,12 @@
     document.getElementById('help-text').innerHTML = '<b>' + helpTopics[i].t + '</b><br><br>' + helpTopics[i].b;
     document.getElementById('help-list').style.display = 'none';
     document.getElementById('help-view').style.display = 'block';
+    fitWindow(document.getElementById('win-help'));
   }
   function helpBack() {
     document.getElementById('help-view').style.display = 'none';
     document.getElementById('help-list').style.display = 'block';
+    fitWindow(document.getElementById('win-help'));
   }
 
   // ===== 終了(シャットダウン / 再起動 / ログオフ) =====
@@ -743,7 +776,7 @@
   </div>
 
   <!-- ウィンドウ：Windowsの終了 -->
-  <div class="window" id="win-shut" style="top:24px; left:10px;" onmousedown="raiseWindow(this)">
+  <div class="window compact" id="win-shut" style="top:24px; left:10px;" onmousedown="raiseWindow(this)">
     <div class="title-bar">
       <div class="title-text">Windowsの終了</div>
       <div class="close-btn" onclick="toggleWindow('win-shut', false)">×</div>
