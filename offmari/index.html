@@ -38,7 +38,7 @@ addEventListener('resize',resize); resize();
 
 // ---------- 状態 ----------
 let state='title', frame=0, score=0, coinsN=0, lives=3, best=0, lockUntil=0, cam=0;
-let offlineReady=false, muted=false, jumpHeld=false, jumpBuf=0;
+let offlineReady=false, offMsg='', muted=false, jumpHeld=false, jumpBuf=0;
 try{best=+localStorage.getItem('pxh-best')||0; muted=localStorage.getItem('pxh-mute')==='1';}catch(e){}
 const keys={left:false,right:false,jump:false,run:false};
 let map, coinList, enemies, particles=[], popups=[];
@@ -320,7 +320,7 @@ function draw(){
       drawHero(VW/2-6,110+Math.sin(frame/10)*3,1,frame/8,false);
       text('タップ / Enter でスタート',VW/2,170,14,'center');
       text('← → 移動　Space/Z ジャンプ　Shift/X ダッシュ',VW/2,194,10,'center','#cfe');
-      text(offlineReady?'✓ オフライン対応済み':'オフライン準備中…',VW/2,220,11,'center',offlineReady?'#8f8':'#fc8');
+      text(offlineReady?'✓ オフライン対応済み':(offMsg||'オフライン準備中…'),VW/2,220,11,'center',offlineReady?'#8f8':(offMsg?'#f88':'#fc8'));
     }else if(state==='over'){
       text('GAME OVER',VW/2,110,28,'center','#f66');
       text('スコア '+score,VW/2,145,14,'center');
@@ -357,10 +357,16 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 if(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window) document.getElementById('pad').style.display='flex';
 
 // ---------- PWA(Service Worker) ----------
-if('serviceWorker' in navigator){
+if(!('serviceWorker' in navigator)){
+  offMsg=location.protocol==='file:'?'× file://では不可(https://で開いてください)':'× このブラウザはオフライン保存に非対応';
+}else if(!window.isSecureContext){
+  offMsg='× https://で開いてください';
+}else{
   addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-    navigator.serviceWorker.ready.then(()=>{offlineReady=true;}).catch(()=>{});
+    navigator.serviceWorker.register('sw.js').catch(e=>{offMsg='× 登録失敗: '+(e&&e.message||e);});
+    navigator.serviceWorker.ready.then(()=>caches.match('./index.html')).then(r=>{
+      if(r){offlineReady=true;}else{offMsg='× 保存に失敗(再読み込みしてください)';}
+    }).catch(e=>{offMsg='× 保存に失敗: '+(e&&e.message||e);});
   });
 }
 

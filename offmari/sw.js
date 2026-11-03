@@ -1,44 +1,65 @@
 // Service Worker: 一度開いたらオフラインでも動くようにファイルをキャッシュする
-const CACHE = 'pixel-hero-v1';
+const CACHE = 'pixel-hero-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    // 1ファイル失敗しても全体が失敗しないよう個別に保存(HTTPキャッシュは無視して最新を取得)
+    const results = await Promise.all(ASSETS.map(async (u) => {
+      try {
+        const res = await fetch(new Request(u, { cache: 'reload' }));
+        if (!res.ok) throw new Error(res.status);
+        await c.put(u, res);
+        return true;
+      } catch (err) { return false; }
+    }));
+    // 本体(index.html)が保存できなかった時だけインストール失敗にする
+    if (!results[1]) throw new Error('index.html をキャッシュできませんでした');
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
-// キャッシュがあればそれを即返し、裏で最新版を取りに行く(次回起動で更新が反映される)
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((hit) => {
-      const net = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => null);
+  // ページ本体(ナビゲーション): キャッシュ優先。無ければネット、ネットも駄目なら index.html
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      const hit = (await cache.match(req, { ignoreSearch: true })) || (await cache.match('./index.html'));
       if (hit) {
-        e.waitUntil(net);
+        // 裏で最新版に更新(失敗しても無視)
+        e.waitUntil(fetch(new Request('./index.html', { cache: 'reload' }))
+          .then((r) => r.ok && cache.put('./index.html', r)).catch(() => {}));
         return hit;
       }
-      return net.then((res) => res || caches.match('./index.html'));
-    })
-  );
+      try { return await fetch(req); }
+      catch (err) { return (await cache.match('./index.html')) || Response.error(); }
+    })());
+    return;
+  }
+
+  // その他のファイル: キャッシュ優先、無ければネット(取れたら保存)
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const hit = await cache.match(req, { ignoreSearch: true });
+    if (hit) return hit;
+    try {
+      const res = await fetch(req);
+      if (res && res.ok) cache.put(req, res.clone());
+      return res;
+    } catch (err) { return Response.error(); }
+  })());
 });
